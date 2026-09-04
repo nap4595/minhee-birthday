@@ -809,6 +809,11 @@ body.intro-leaving .photo-stage {
   white-space: nowrap;
 }
 
+.relationship-hero .title-line {
+  display: block;
+  white-space: nowrap;
+}
+
 .relationship-hero strong {
   color: #fff;
   font-weight: 650;
