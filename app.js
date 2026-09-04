@@ -218,7 +218,7 @@
       const y = Math.max(-2, Math.min(96 - approxCardHeightPct, rawY));
 
       const rotation = -11 + seededValue(seed, 4) * 22;
-      const opacity = 0.32 + seededValue(seed, 6) * 0.22;
+      const opacity = 0.45 + seededValue(seed, 6) * 0.22;
       const duration = 15 + seededValue(seed, 7) * 14;
 
       card.style.setProperty("--x", `${x.toFixed(2)}%`);
