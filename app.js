@@ -196,26 +196,26 @@
       const cellCenterX = (col + 0.5) * cellWidth;
       const cellCenterY = (row + 0.5) * cellHeight;
 
-      // Card size
+      // Card size (increased by ~25%)
       const size = isMobile
-        ? 5.6 + seededValue(seed, 3) * 1.8 // 5.6rem ~ 7.4rem
-        : 8.5 + seededValue(seed, 3) * 3.5; // 8.5rem ~ 12rem
+        ? 7.0 + seededValue(seed, 3) * 2.2 // 7.0rem ~ 9.2rem
+        : 10.6 + seededValue(seed, 3) * 4.4; // 10.6rem ~ 15.0rem
 
       const scale = 0.90 + seededValue(seed, 5) * 0.18;
 
       // Approximate card dimensions in percentage for centering
-      const approxCardWidthPct = isMobile ? 24 * scale : 11 * scale;
-      const approxCardHeightPct = isMobile ? 9.5 * scale : 9 * scale;
+      const approxCardWidthPct = isMobile ? 30 * scale : 13.8 * scale;
+      const approxCardHeightPct = isMobile ? 12 * scale : 11.2 * scale;
 
       // Bounded jitter so adjacent photos scatter naturally without heavily overlapping
-      const jitterX = (seededValue(seed, 1) - 0.5) * (cellWidth * 0.45);
-      const jitterY = (seededValue(seed, 2) - 0.5) * (cellHeight * 0.45);
+      const jitterX = (seededValue(seed, 1) - 0.5) * (cellWidth * 0.38);
+      const jitterY = (seededValue(seed, 2) - 0.5) * (cellHeight * 0.38);
 
       const rawX = cellCenterX - (approxCardWidthPct / 2) + jitterX;
       const rawY = cellCenterY - (approxCardHeightPct / 2) + jitterY;
 
-      const x = Math.max(-2, Math.min(94 - approxCardWidthPct, rawX));
-      const y = Math.max(-2, Math.min(96 - approxCardHeightPct, rawY));
+      const x = Math.max(-2, Math.min(96 - approxCardWidthPct, rawX));
+      const y = Math.max(-2, Math.min(97 - approxCardHeightPct, rawY));
 
       const rotation = -11 + seededValue(seed, 4) * 22;
       const opacity = 0.45 + seededValue(seed, 6) * 0.22;
