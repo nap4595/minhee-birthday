@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#12101f" />
+    <meta
+      name="description"
+      content="민희의 세 번째 생일을 즉석사진으로 남기는 카메라"
+    />
+    <title>민희의 세 번째 생일</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="photo-only gate-locked assets-loading">
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+    <div id="photo-stage" class="photo-stage" aria-hidden="true"></div>
+    <div class="background-veil" aria-hidden="true"></div>
+    <audio id="background-music" src="riverbend-serenade.mp3" loop preload="none"></audio>
+    <div class="top-controls">
+      <button id="music-toggle" class="music-toggle" type="button" aria-pressed="false" disabled>
+        <span class="music-note" aria-hidden="true">♪</span>
+        <span id="music-toggle-label">음악 켜기</span>
+      </button>
+      <button id="fullscreen-toggle" class="fullscreen-toggle" type="button" aria-pressed="false" aria-label="전체 화면으로 보기" hidden>
+        <span class="fullscreen-icon" aria-hidden="true">⛶</span>
+        <span id="fullscreen-toggle-label">전체 화면</span>
+      </button>
+    </div>
+
+    <section id="anniversary-gate" class="anniversary-gate" aria-labelledby="gate-question">
+      <form id="anniversary-form" class="anniversary-form" novalidate>
+        <p class="gate-kicker">Only for us</p>
+        <h1 id="gate-question">우리가 만난 지<br />며칠 됐을까?</h1>
+        <label class="day-password">
+          <span aria-hidden="true">D+</span>
+          <input id="day-answer" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="off" aria-label="만난 날짜의 일수" />
+        </label>
+        <button id="gate-submit" class="gate-submit" type="submit" disabled>준비 중</button>
+        <div class="gate-loading" aria-live="polite">
+          <div class="gate-progress" aria-hidden="true">
+            <span id="gate-progress-bar"></span>
+          </div>
+          <p id="gate-loading-message">우리의 추억을 불러오는 중…</p>
+        </div>
+        <p id="gate-message" class="gate-message" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <main id="main-page" class="page main-page" inert>
+      <section id="home-view" class="home-view" aria-labelledby="main-title">
+        <header class="relationship-hero">
+          <p id="relationship-days" class="relationship-days">D+1</p>
+          <h1 id="main-title">우리가 보내는<br /><strong>민희의 세 번째 생일</strong></h1>
+          <p class="birthday-date">2026.09.09</p>
+        </header>
+        <button id="open-features" class="open-features" type="button" aria-expanded="false" aria-controls="feature-menu">
+          <span>열어보기</span>
+          <span class="open-features-arrow" aria-hidden="true">⌄</span>
+        </button>
+      </section>
+
+      <div id="feature-menu" class="feature-menu" hidden>
+        <button id="dismiss-feature-menu" class="feature-menu-backdrop" type="button" aria-label="기능 메뉴 닫기"></button>
+        <section class="feature-sheet" role="dialog" aria-modal="true" aria-label="기능 선택">
+          <div class="feature-sheet-handle" aria-hidden="true"></div>
+          <button id="close-feature-menu" class="feature-menu-close" type="button" aria-label="기능 메뉴 닫기">×</button>
+          <div class="feature-choices">
+            <button class="feature-choice" type="button" data-open-feature="cake">
+              <strong>케이크 사진</strong>
+            </button>
+            <button class="feature-choice" type="button" data-open-feature="us">
+              <strong>오늘의 우리</strong>
+            </button>
+            <button class="feature-choice" type="button" data-open-feature="gallery">
+              <strong>Gallery</strong>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <section id="feature-workspace" class="feature-workspace" hidden>
+        <button id="back-to-main" class="back-to-main" type="button">← 메인</button>
+        <section class="camera-dialog camera-inline" aria-labelledby="camera-title">
+        <div class="camera-dialog-header">
+          <div>
+            <h2 id="camera-title">생일 케이크 기록</h2>
+          </div>
+        </div>
+
+        <div class="camera-tabs" role="tablist" aria-label="촬영 종류">
+          <button id="cake-tab" class="camera-tab" type="button" role="tab" aria-selected="true" aria-controls="camera-live-panel" data-camera-mode="cake">케이크 사진</button>
+          <button id="us-tab" class="camera-tab" type="button" role="tab" aria-selected="false" aria-controls="camera-live-panel" data-camera-mode="us">오늘의 우리</button>
+          <button id="gallery-tab" class="camera-tab" type="button" role="tab" aria-selected="false" aria-controls="gallery-panel" data-camera-mode="gallery">Gallery</button>
+        </div>
+
+        <section id="gallery-panel" class="gallery-panel" aria-labelledby="gallery-tab" hidden>
+          <p id="gallery-count" class="gallery-count"></p>
+          <div id="gallery-grid" class="gallery-grid"></div>
+          <button id="gallery-more" class="secondary-button gallery-more" type="button">사진 더 보기</button>
+        </section>
+
+        <div id="camera-live-panel" class="camera-live-panel">
+          <div class="camera-frame is-cake-mode">
+            <div id="camera-photo-area" class="camera-photo-area">
+              <video id="camera-video" autoplay muted playsinline></video>
+              <img id="camera-overlay" class="camera-overlay" alt="" hidden />
+            </div>
+            <div class="camera-writing" hidden>
+              <label class="visually-hidden" for="photo-caption">사진에 넣을 문구</label>
+              <input id="photo-caption" class="camera-caption" type="text" value="happy birthday" maxlength="40" spellcheck="false" />
+              <span>20260909</span>
+            </div>
+          </div>
+          <p id="camera-status" class="camera-status" hidden></p>
+          <section id="frame-controls" class="frame-controls" aria-labelledby="frame-controls-title" hidden>
+            <h3 id="frame-controls-title">사진 프레임</h3>
+            <div id="frame-options" class="frame-options" role="listbox" aria-label="사진 프레임 선택"></div>
+          </section>
+          <div class="camera-actions">
+            <button id="switch-camera" class="secondary-button" type="button">카메라 전환</button>
+            <button id="take-photo" class="primary-button shutter-button" type="button" disabled>촬영</button>
+          </div>
+        </div>
+
+        <div id="camera-result-panel" class="camera-result-panel" hidden>
+          <div id="photo-result-frame" class="polaroid-result is-cake-strip">
+            <img id="captured-image" alt="2024년, 2025년, 2026년 케이크 사진과 생일 축하 문구를 세로로 이어 붙인 사진" />
+          </div>
+          <div class="camera-actions">
+            <button id="retake-photo" class="secondary-button" type="button">다시 찍기</button>
+            <a id="download-photo" class="primary-button" download="minhee-birthday-cakes-2024-2026.png">사진 저장</a>
+          </div>
+        </div>
+
+        <canvas id="photo-canvas" width="1200" height="1500" hidden></canvas>
+        </section>
+      </section>
+    </main>
+
+    <noscript>
+      <p class="noscript">사진 촬영 기능을 사용하려면 브라우저에서 JavaScript를 켜 주세요.</p>
+    </noscript>
+
+    <script src="site-data.js"></script>
+    <script src="app.js"></script>
+    <script src="camera.js"></script>
+  </body>
+</html>
