@@ -463,6 +463,7 @@
     closeFeatureMenu({ restoreFocus: false, immediate: true });
     homeView.hidden = true;
     featureWorkspace.hidden = false;
+    backToMainButton.hidden = false;
     document.body.classList.remove("main-active");
     document.body.classList.add("feature-active");
     document.dispatchEvent(new CustomEvent("feature-opened", { detail: { mode } }));
@@ -475,6 +476,7 @@
   function returnToMain() {
     document.dispatchEvent(new CustomEvent("feature-closed"));
     featureWorkspace.hidden = true;
+    backToMainButton.hidden = true;
     homeView.hidden = false;
     document.body.classList.remove("feature-active", "gallery-active");
     document.body.classList.add("main-active");

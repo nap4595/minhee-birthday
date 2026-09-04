@@ -622,10 +622,6 @@ body.intro-leaving .photo-stage {
 }
 
 .back-to-main {
-  position: fixed;
-  z-index: 13;
-  top: max(1rem, env(safe-area-inset-top));
-  left: max(1rem, env(safe-area-inset-left));
   min-height: 2.7rem;
   margin: 0;
   padding: 0.7rem 1rem;
@@ -828,6 +824,13 @@ body.intro-leaving .photo-stage {
   letter-spacing: 0.22em;
 }
 
+.birthday-signature {
+  margin: 0.55rem 0 0;
+  color: rgba(255, 248, 244, 0.62);
+  font: 550 0.8rem/1 "Segoe UI", sans-serif;
+  letter-spacing: 0.22em;
+}
+
 @keyframes home-view-enter {
   from { opacity: 0; transform: translateY(1rem); }
   to { opacity: 1; transform: translateY(0); }
@@ -980,7 +983,8 @@ body.gallery-active .camera-dialog.camera-inline {
 }
 
 .music-toggle,
-.fullscreen-toggle {
+.fullscreen-toggle,
+.back-to-main {
   pointer-events: auto;
   min-height: 2.8rem;
   display: inline-flex;
@@ -1003,7 +1007,8 @@ body.gallery-active .camera-dialog.camera-inline {
 }
 
 .music-toggle:hover,
-.fullscreen-toggle:hover {
+.fullscreen-toggle:hover,
+.back-to-main:hover {
   transform: translateY(-2px);
   background: rgba(54, 32, 67, 0.9);
 }

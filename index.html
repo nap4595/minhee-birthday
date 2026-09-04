@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260905-1" />
+    <link rel="stylesheet" href="styles.css?v=20260905-2" />
   </head>
   <body class="photo-only gate-locked assets-loading">
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -21,6 +21,7 @@
     <div class="background-veil" aria-hidden="true"></div>
     <audio id="background-music" src="riverbend-serenade.mp3" loop preload="none"></audio>
     <div class="top-controls">
+      <button id="back-to-main" class="back-to-main" type="button" hidden>← 메인</button>
       <button id="music-toggle" class="music-toggle" type="button" aria-pressed="false" disabled>
         <span class="music-note" aria-hidden="true">♪</span>
         <span id="music-toggle-label">음악 켜기</span>
@@ -59,6 +60,7 @@
             <strong class="title-line">민희야 생일 축하해</strong>
           </h1>
           <p class="birthday-date">2026.09.09</p>
+          <p class="birthday-signature">동욱이가</p>
         </header>
         <button
           id="presentation-toggle"
@@ -93,7 +95,6 @@
       </div>
 
       <section id="feature-workspace" class="feature-workspace" hidden>
-        <button id="back-to-main" class="back-to-main" type="button">← 메인</button>
         <section class="camera-dialog camera-inline" aria-labelledby="camera-title">
         <div class="camera-dialog-header">
           <div>
@@ -155,8 +156,8 @@
       <p class="noscript">사진 촬영 기능을 사용하려면 브라우저에서 JavaScript를 켜 주세요.</p>
     </noscript>
 
-    <script src="site-data.js?v=20260905-1"></script>
-    <script src="app.js?v=20260905-1"></script>
-    <script src="camera.js?v=20260905-1"></script>
+    <script src="site-data.js?v=20260905-2"></script>
+    <script src="app.js?v=20260905-2"></script>
+    <script src="camera.js?v=20260905-2"></script>
   </body>
 </html>
