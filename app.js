@@ -18,6 +18,7 @@
   const gateProgressBar = document.getElementById("gate-progress-bar");
   const mainPage = document.getElementById("main-page");
   const homeView = document.getElementById("home-view");
+  const presentationToggle = document.getElementById("presentation-toggle");
   const openFeaturesButton = document.getElementById("open-features");
   const featureMenu = document.getElementById("feature-menu");
   const dismissFeatureMenuButton = document.getElementById("dismiss-feature-menu");
@@ -423,6 +424,15 @@
     relationshipDays.textContent = `D+${relationshipDayCount}`;
   }
 
+  function togglePresentationControls() {
+    const controlsAreHidden = document.body.classList.toggle("presentation-controls-hidden");
+    presentationToggle?.setAttribute("aria-pressed", String(controlsAreHidden));
+    presentationToggle?.setAttribute(
+      "aria-label",
+      controlsAreHidden ? "화면의 버튼 다시 보이기" : "화면의 버튼 숨기기"
+    );
+  }
+
   function openFeatureMenu() {
     if (!featureMenu || document.body.classList.contains("feature-menu-open")) return;
     if (menuCloseTimer) window.clearTimeout(menuCloseTimer);
@@ -539,6 +549,7 @@
     }
   }
   updateMusicButton();
+  presentationToggle?.addEventListener("click", togglePresentationControls);
   openFeaturesButton?.addEventListener("click", openFeatureMenu);
   dismissFeatureMenuButton?.addEventListener("click", () => closeFeatureMenu());
   closeFeatureMenuButton?.addEventListener("click", () => closeFeatureMenu());

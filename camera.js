@@ -14,6 +14,7 @@
   const takeButton = document.getElementById("take-photo");
   const retakeButton = document.getElementById("retake-photo");
   const downloadLink = document.getElementById("download-photo");
+  let downloadSequence = 0;
   const capturedImage = document.getElementById("captured-image");
   const captionInput = document.getElementById("photo-caption");
   const cameraWriting = document.querySelector(".camera-writing");
@@ -523,9 +524,8 @@
         capturedImage.src = photoUrl;
         downloadLink.href = photoUrl;
         const isCake = captureMode === "cake";
-        downloadLink.download = isCake
-          ? "minhee-birthday-cakes-2024-2026.png"
-          : "minhee-third-birthday-20260909.png";
+        downloadLink.dataset.captureMode = isCake ? "cake" : "us";
+        downloadLink.download = createDownloadFilename(downloadLink.dataset.captureMode);
         capturedImage.alt = isCake
           ? "2024년, 2025년, 2026년 케이크 사진과 생일 축하 문구를 세로로 이어 붙인 사진"
           : "생일 문구 프레임과 날짜가 들어간 오늘의 우리 사진";
@@ -548,6 +548,27 @@
       takeButton.textContent = captureMode === "cake" ? "케이크 촬영" : "오늘 촬영";
     }
   }
+
+  function createDownloadFilename(mode) {
+    const now = new Date();
+    const pad = (value, length = 2) => String(value).padStart(length, "0");
+    const timestamp = [
+      now.getFullYear(),
+      pad(now.getMonth() + 1),
+      pad(now.getDate())
+    ].join("") + "-" + [
+      pad(now.getHours()),
+      pad(now.getMinutes()),
+      pad(now.getSeconds())
+    ].join("") + `-${pad(now.getMilliseconds(), 3)}`;
+    downloadSequence = (downloadSequence + 1) % 1000;
+    const subject = mode === "cake" ? "birthday-cakes" : "birthday-photo";
+    return `minhee-${subject}-${timestamp}-${pad(downloadSequence, 3)}.png`;
+  }
+
+  downloadLink?.addEventListener("click", () => {
+    downloadLink.download = createDownloadFilename(downloadLink.dataset.captureMode || captureMode);
+  });
 
   function pointerDistance() {
     const [first, second] = Array.from(activePointers.values());
