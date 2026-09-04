@@ -117,7 +117,7 @@ body::before {
   position: absolute;
   top: var(--y);
   left: var(--x);
-  width: clamp(9rem, var(--size), 20rem);
+  width: clamp(4.8rem, var(--size), 18rem);
   aspect-ratio: var(--ratio, 4 / 3);
   overflow: hidden;
   border: 5px solid rgba(255, 252, 245, 0.88);
@@ -1626,8 +1626,10 @@ body.gallery-active .camera-dialog.camera-inline {
 
   .media-card,
   .memory-placeholder {
-    width: clamp(7.5rem, var(--size), 13rem);
-    opacity: calc(var(--opacity, 0.42) * 0.78);
+    width: clamp(4.5rem, var(--size), 8.5rem);
+    border-width: 3.5px;
+    border-bottom-width: 11px;
+    opacity: calc(var(--opacity, 0.42) * 0.82);
   }
 
   .background-veil {

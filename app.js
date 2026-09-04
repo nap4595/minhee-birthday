@@ -154,32 +154,82 @@
       return;
     }
 
-    const slotCount = Math.min(window.innerWidth <= 720 ? 24 : 28, items.length);
+    const isMobile = window.innerWidth <= 720;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const targetCount = isMobile ? 24 : 28;
+    const slotCount = Math.min(targetCount, items.length);
+
+    // Determine grid columns and rows to distribute photos across the screen
+    let cols, rows;
+    if (isMobile) {
+      cols = isPortrait ? 3 : 6;
+      rows = Math.ceil(slotCount / cols);
+    } else {
+      cols = isPortrait ? 4 : 7;
+      rows = Math.ceil(slotCount / cols);
+    }
+
+    const cellWidth = 100 / cols;
+    const cellHeight = 100 / rows;
+
+    // Create and shuffle cell indices so the distribution is randomized yet uniformly spread
+    const cellIndices = Array.from({ length: cols * rows }, (_, i) => i);
+    for (let i = cellIndices.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(seededValue(42 + i * 17, 1) * (i + 1));
+      const temp = cellIndices[i];
+      cellIndices[i] = cellIndices[j];
+      cellIndices[j] = temp;
+    }
+
     const cards = [];
     for (let index = 0; index < slotCount; index += 1) {
       const filename = items[index];
       const seed = hashText(`${filename}-${index}`);
       const card = document.createElement("div");
       card.className = "media-card";
-      const x = -2 + seededValue(seed, 1) * 91;
-      const y = -5 + seededValue(seed, 2) * 96;
-      const size = window.innerWidth <= 720
-        ? 7 + seededValue(seed, 3) * 4
-        : 9.5 + seededValue(seed, 3) * 6;
-      const rotation = -11 + seededValue(seed, 4) * 22;
-      const scale = 0.86 + seededValue(seed, 5) * 0.28;
-      const opacity = 0.31 + seededValue(seed, 6) * 0.28;
-      const duration = 14 + seededValue(seed, 7) * 15;
 
-      card.style.setProperty("--x", `${x}%`);
-      card.style.setProperty("--y", `${y}%`);
-      card.style.setProperty("--size", `${size}rem`);
-      card.style.setProperty("--rotation", `${rotation}deg`);
+      const cellIndex = cellIndices[index % cellIndices.length];
+      const col = cellIndex % cols;
+      const row = Math.floor(cellIndex / cols);
+
+      // Center of this cell
+      const cellCenterX = (col + 0.5) * cellWidth;
+      const cellCenterY = (row + 0.5) * cellHeight;
+
+      // Card size
+      const size = isMobile
+        ? 5.6 + seededValue(seed, 3) * 1.8 // 5.6rem ~ 7.4rem
+        : 8.5 + seededValue(seed, 3) * 3.5; // 8.5rem ~ 12rem
+
+      const scale = 0.90 + seededValue(seed, 5) * 0.18;
+
+      // Approximate card dimensions in percentage for centering
+      const approxCardWidthPct = isMobile ? 24 * scale : 11 * scale;
+      const approxCardHeightPct = isMobile ? 9.5 * scale : 9 * scale;
+
+      // Bounded jitter so adjacent photos scatter naturally without heavily overlapping
+      const jitterX = (seededValue(seed, 1) - 0.5) * (cellWidth * 0.45);
+      const jitterY = (seededValue(seed, 2) - 0.5) * (cellHeight * 0.45);
+
+      const rawX = cellCenterX - (approxCardWidthPct / 2) + jitterX;
+      const rawY = cellCenterY - (approxCardHeightPct / 2) + jitterY;
+
+      const x = Math.max(-2, Math.min(94 - approxCardWidthPct, rawX));
+      const y = Math.max(-2, Math.min(96 - approxCardHeightPct, rawY));
+
+      const rotation = -11 + seededValue(seed, 4) * 22;
+      const opacity = 0.32 + seededValue(seed, 6) * 0.22;
+      const duration = 15 + seededValue(seed, 7) * 14;
+
+      card.style.setProperty("--x", `${x.toFixed(2)}%`);
+      card.style.setProperty("--y", `${y.toFixed(2)}%`);
+      card.style.setProperty("--size", `${size.toFixed(2)}rem`);
+      card.style.setProperty("--rotation", `${rotation.toFixed(1)}deg`);
       card.style.setProperty("--scale", scale.toFixed(3));
       card.style.setProperty("--opacity", opacity.toFixed(3));
       card.style.setProperty("--duration", `${duration.toFixed(1)}s`);
       card.style.setProperty("--delay", `${(-seededValue(seed, 8) * duration).toFixed(1)}s`);
-      card.style.setProperty("--ratio", seededValue(seed, 9) > 0.7 ? "3 / 4" : "4 / 3");
+      card.style.setProperty("--ratio", seededValue(seed, 9) > 0.65 ? "3 / 4" : "4 / 3");
       const visual = createMediaVisual(filename);
       visual.classList.add("is-active");
       card.append(visual);
