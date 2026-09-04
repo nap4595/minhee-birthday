@@ -799,7 +799,7 @@ body.intro-leaving .photo-stage {
 
 .relationship-hero h1 {
   margin: 0;
-  font-size: clamp(1.1rem, 4.76vw, 2.516rem);
+  font-size: clamp(0.88rem, 3.808vw, 2.013rem);
   font-weight: 450;
   line-height: 1.24;
   letter-spacing: -0.055em;
