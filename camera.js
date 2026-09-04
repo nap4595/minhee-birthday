@@ -192,6 +192,10 @@
     capturedImage.removeAttribute("src");
     resultPanel.hidden = true;
     livePanel.hidden = false;
+    status.hidden = true;
+    status.textContent = "";
+    status.classList.remove("is-processing");
+    takeButton.textContent = captureMode === "cake" ? "케이크 촬영" : "오늘 촬영";
   }
 
   function setCaptureMode(mode, { restartFromResult = true } = {}) {
@@ -485,7 +489,16 @@
   async function takePhoto() {
     if (!stream || !video.videoWidth) return;
     takeButton.disabled = true;
-    status.hidden = true;
+    takeButton.textContent = "처리중…";
+    switchButton.disabled = true;
+    status.hidden = false;
+    status.classList.add("is-processing");
+    status.textContent = captureMode === "cake"
+      ? "처리중… 과거 케이크 사진들과 합치고 있어 :)"
+      : "처리중… 사진을 완성하고 있어 :)";
+
+    await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 40)));
+
     try {
       if (captureMode === "cake") {
         await drawCakeStrip();
@@ -496,10 +509,13 @@
       }
 
       canvas.toBlob((blob) => {
+        switchButton.disabled = false;
+        status.classList.remove("is-processing");
         if (!blob) {
           status.hidden = false;
           status.textContent = "사진을 만들지 못했어. 한 번 더 촬영해 줘.";
           takeButton.disabled = false;
+          takeButton.textContent = captureMode === "cake" ? "케이크 촬영" : "오늘 촬영";
           return;
         }
         if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -516,14 +532,20 @@
         resultFrame.classList.toggle("is-cake-strip", isCake);
         livePanel.hidden = true;
         resultPanel.hidden = false;
+        status.hidden = true;
+        status.textContent = "";
+        takeButton.textContent = isCake ? "케이크 촬영" : "오늘 촬영";
         stopCamera();
         retakeButton.focus();
       }, "image/png");
     } catch (error) {
       console.error(error);
+      switchButton.disabled = false;
+      status.classList.remove("is-processing");
       status.hidden = false;
       status.textContent = "사진 재료를 준비하지 못했어. 페이지를 새로 열고 다시 촬영해 줘.";
       takeButton.disabled = false;
+      takeButton.textContent = captureMode === "cake" ? "케이크 촬영" : "오늘 촬영";
     }
   }
 

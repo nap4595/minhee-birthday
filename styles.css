@@ -1383,6 +1383,21 @@ body.gallery-active .camera-dialog.camera-inline {
   text-align: center;
 }
 
+.camera-status.is-processing {
+  color: #ffd8e4;
+  font-weight: 600;
+  animation: camera-status-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes camera-status-pulse {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .frame-controls {
   margin-top: 0.8rem;
   padding: 0.9rem;

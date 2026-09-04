@@ -154,7 +154,7 @@
       return;
     }
 
-    const slotCount = Math.min(window.innerWidth <= 720 ? 16 : 28, items.length);
+    const slotCount = Math.min(window.innerWidth <= 720 ? 24 : 28, items.length);
     const cards = [];
     for (let index = 0; index < slotCount; index += 1) {
       const filename = items[index];
@@ -437,7 +437,7 @@
       return;
     }
 
-    gateMessage.textContent = "맞았어 ♥";
+    gateMessage.textContent = "";
     anniversaryForm.classList.remove("is-wrong");
     musicToggle.disabled = false;
     musicWasManuallyPaused = false;
