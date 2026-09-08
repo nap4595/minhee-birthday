@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260908-4" />
+    <link rel="stylesheet" href="styles.css?v=20260908-5" />
   </head>
   <body class="photo-only gate-locked assets-loading">
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -38,7 +38,7 @@
         <h1 id="gate-question">우리가 만난 지<br />며칠 됐을까?</h1>
         <label class="day-password">
           <span aria-hidden="true">D+</span>
-          <input id="day-answer" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="off" aria-label="만난 날짜의 일수" />
+          <input id="day-answer" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="off" aria-label="만난 날짜의 일수" />
         </label>
         <button id="gate-submit" class="gate-submit" type="submit" disabled>준비 중</button>
         <div class="gate-loading" aria-live="polite">
@@ -130,6 +130,7 @@
 
         <section id="gallery-panel" class="gallery-panel" aria-labelledby="gallery-tab" hidden>
           <p id="gallery-count" class="gallery-count"></p>
+          <p id="gallery-storage-note" class="gallery-storage-note" hidden>기기에 저장한 사진은 길게 눌러 하나씩 삭제할 수 있어.</p>
           <div id="gallery-grid" class="gallery-grid"></div>
           <button id="gallery-more" class="secondary-button gallery-more" type="button">사진 더 보기</button>
         </section>
@@ -185,12 +186,27 @@
       </section>
     </main>
 
+    <div id="memory-delete-dialog" class="memory-delete-dialog" hidden>
+      <button id="memory-delete-backdrop" class="memory-delete-backdrop" type="button" aria-label="사진 삭제 취소"></button>
+      <section class="memory-delete-card" role="alertdialog" aria-modal="true" aria-labelledby="memory-delete-title" aria-describedby="memory-delete-description">
+        <span class="memory-delete-mark" aria-hidden="true">×</span>
+        <p class="memory-delete-kicker">SAVED MEMORY</p>
+        <h2 id="memory-delete-title">이 사진을 삭제할까?</h2>
+        <p id="memory-delete-description">이 기기의 갤러리와 배경에서<br />선택한 사진 하나만 사라져.</p>
+        <p id="memory-delete-status" class="memory-delete-status" aria-live="polite"></p>
+        <div class="memory-delete-actions">
+          <button id="memory-delete-cancel" class="secondary-button" type="button">취소</button>
+          <button id="memory-delete-confirm" class="danger-button" type="button">삭제</button>
+        </div>
+      </section>
+    </div>
+
     <noscript>
       <p class="noscript">사진 촬영 기능을 사용하려면 브라우저에서 JavaScript를 켜 주세요.</p>
     </noscript>
 
     <script src="site-data.js?v=20260908"></script>
-    <script src="app.js?v=20260908-4"></script>
-    <script src="camera.js?v=20260908-4"></script>
+    <script src="app.js?v=20260908-5"></script>
+    <script src="camera.js?v=20260908-5"></script>
   </body>
 </html>

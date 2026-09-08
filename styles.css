@@ -49,6 +49,10 @@ body.feature-menu-open {
   overflow: hidden;
 }
 
+body.memory-delete-open {
+  overflow: hidden;
+}
+
 body.intro-active {
   height: 100vh;
   overflow: hidden;
@@ -1001,6 +1005,13 @@ body.gallery-active .camera-dialog.camera-inline {
   text-align: right;
 }
 
+.gallery-storage-note {
+  margin: -0.25rem 0 0.9rem;
+  color: rgba(255, 248, 244, 0.58);
+  font: 0.75rem/1.55 "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+  text-align: right;
+}
+
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1033,6 +1044,29 @@ body.gallery-active .camera-dialog.camera-inline {
   transform: scale(1.035);
 }
 
+.gallery-grid figure.is-saved-memory {
+  cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.gallery-grid figure.is-saved-memory::after {
+  position: absolute;
+  top: 0.38rem;
+  right: 0.38rem;
+  padding: 0.28rem 0.42rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.9);
+  content: "기기 저장";
+  background: rgba(19, 13, 28, 0.68);
+  font: 650 0.58rem/1 "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
 .gallery-more {
   display: block;
   margin: 1.2rem auto 0;
@@ -1040,6 +1074,122 @@ body.gallery-active .camera-dialog.camera-inline {
 
 .gallery-more[hidden] {
   display: none;
+}
+
+.memory-delete-dialog {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.memory-delete-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(6, 4, 12, 0.76);
+  cursor: default;
+  backdrop-filter: blur(12px);
+}
+
+.memory-delete-card {
+  position: relative;
+  z-index: 1;
+  width: min(22rem, 100%);
+  padding: 2rem 1.5rem 1.4rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1.6rem;
+  color: #fff8f4;
+  background:
+    radial-gradient(circle at 50% 0, rgba(185, 72, 112, 0.18), transparent 13rem),
+    linear-gradient(155deg, #291b2d, #15121f 72%);
+  box-shadow: 0 2rem 7rem rgba(0, 0, 0, 0.68);
+  text-align: center;
+  animation: memory-delete-enter 260ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+
+.memory-delete-mark {
+  width: 2.65rem;
+  height: 2.65rem;
+  display: grid;
+  margin: 0 auto 1.15rem;
+  place-items: center;
+  border: 1px solid rgba(235, 138, 160, 0.34);
+  border-radius: 50%;
+  color: #f4c6d2;
+  background: rgba(176, 62, 94, 0.13);
+  font: 300 1.4rem/1 sans-serif;
+}
+
+.memory-delete-kicker {
+  margin: 0 0 0.55rem;
+  color: #dca0b3;
+  font: 700 0.62rem/1 "Segoe UI", sans-serif;
+  letter-spacing: 0.2em;
+}
+
+.memory-delete-card h2 {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.memory-delete-card > p:not(.memory-delete-kicker, .memory-delete-status) {
+  margin: 0.7rem 0 0;
+  color: rgba(255, 248, 244, 0.6);
+  font: 0.8rem/1.6 "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+}
+
+.memory-delete-status {
+  min-height: 1.2rem;
+  margin: 0.6rem 0 0;
+  color: #efb8c8;
+  font: 0.73rem/1.5 "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+}
+
+.memory-delete-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+
+.danger-button {
+  min-height: 2.85rem;
+  padding: 0.75rem 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: #a93458;
+  box-shadow: 0 0.65rem 1.5rem rgba(62, 8, 30, 0.34);
+  font: 650 0.85rem/1 "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+  cursor: pointer;
+}
+
+.danger-button:hover {
+  background: #bf3d65;
+}
+
+.danger-button:focus-visible {
+  outline: 3px solid rgba(238, 176, 194, 0.76);
+  outline-offset: 3px;
+}
+
+.danger-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+@keyframes memory-delete-enter {
+  from { opacity: 0; transform: translateY(0.8rem) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .top-controls {
@@ -1894,7 +2044,8 @@ body.gallery-active .camera-dialog.camera-inline {
 
   .media-card,
   .memory-placeholder,
-  .processing-orbit {
+  .processing-orbit,
+  .memory-delete-card {
     width: clamp(5.5rem, var(--size), 11rem);
     border-width: 4px;
     border-bottom-width: 13px;

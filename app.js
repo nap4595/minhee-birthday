@@ -145,6 +145,17 @@
     });
   }
 
+  async function removePersistedMemory(id) {
+    const database = await memoryDatabase;
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(MEMORY_STORE, "readwrite");
+      transaction.objectStore(MEMORY_STORE).delete(id);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error || new Error("사진을 삭제하지 못했습니다."));
+      transaction.onabort = () => reject(transaction.error || new Error("사진 삭제가 중단되었습니다."));
+    });
+  }
+
   function memoryView(record) {
     let url = resolvedMediaUrls.get(record.id);
     if (!url) {
@@ -645,11 +656,34 @@
       persisted = false;
       console.warn("사진을 이 브라우저에 계속 보관하지 못했습니다.", error);
     }
+    record.persisted = persisted;
     savedMemories.unshift(record);
     const view = memoryView(record);
     addPersistentMemoryCard(record.id, persistentMemoryCards.size, record.mode);
     document.dispatchEvent(new CustomEvent("memory-saved", { detail: view }));
     return { ...view, persisted };
+  }
+
+  async function deleteMemory(id) {
+    await memoriesReady;
+    const recordIndex = savedMemories.findIndex((memory) => memory.id === id);
+    if (recordIndex < 0) return false;
+    const record = savedMemories[recordIndex];
+    if (record.persisted !== false) await removePersistedMemory(id);
+    savedMemories.splice(recordIndex, 1);
+    persistentMemoryCards.get(id)?.remove();
+    persistentMemoryCards.delete(id);
+    document.dispatchEvent(new CustomEvent("memory-deleted", { detail: { id } }));
+    const url = resolvedMediaUrls.get(id);
+    if (url) {
+      queueMicrotask(() => {
+        URL.revokeObjectURL(url);
+        resolvedMediaUrls.delete(id);
+        const urlIndex = objectUrls.indexOf(url);
+        if (urlIndex >= 0) objectUrls.splice(urlIndex, 1);
+      });
+    }
+    return true;
   }
 
   const readyPromise = preloadAllAssets();
@@ -662,7 +696,8 @@
   window.SITE_MEMORIES = {
     ready: memoriesReady,
     list: () => savedMemories.map(memoryView),
-    save: saveMemory
+    save: saveMemory,
+    delete: deleteMemory
   };
 
   updateRelationshipDays();

@@ -30,7 +30,13 @@
   const galleryPanel = document.getElementById("gallery-panel");
   const galleryGrid = document.getElementById("gallery-grid");
   const galleryCount = document.getElementById("gallery-count");
+  const galleryStorageNote = document.getElementById("gallery-storage-note");
   const galleryMore = document.getElementById("gallery-more");
+  const memoryDeleteDialog = document.getElementById("memory-delete-dialog");
+  const memoryDeleteBackdrop = document.getElementById("memory-delete-backdrop");
+  const memoryDeleteCancel = document.getElementById("memory-delete-cancel");
+  const memoryDeleteConfirm = document.getElementById("memory-delete-confirm");
+  const memoryDeleteStatus = document.getElementById("memory-delete-status");
   const canvas = document.getElementById("photo-canvas");
   const context = canvas.getContext("2d");
   const siteData = window.SITE_DATA || {};
@@ -44,6 +50,7 @@
 
   const DEFAULT_FRAME_STATE = Object.freeze({ x: 50, y: 32, scale: 72 });
   const GALLERY_BATCH_SIZE = 36;
+  const LONG_PRESS_DURATION = 650;
   const CAPTION_FONT = '"Nanum Pen Script", "HY얕은샘물M", "HY엽서M", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
   let frameImage = new Image();
   let stream = null;
@@ -64,6 +71,9 @@
   let dragStart = null;
   let pinchStart = null;
   let galleryShown = 0;
+  let pendingDeleteId = null;
+  let longPressTimer = null;
+  let longPressStart = null;
   let galleryItems = packagedGalleryFiles.map((filename) => ({
     id: `packaged:${filename}`,
     src: window.SITE_ASSETS?.mediaUrl(filename) || assetUrl("img-preview", filename)
@@ -195,6 +205,71 @@
     selectFrame(selectedFrame);
   }
 
+  function cancelLongPress() {
+    if (longPressTimer) window.clearTimeout(longPressTimer);
+    longPressTimer = null;
+    longPressStart = null;
+  }
+
+  function openMemoryDeleteDialog(id, trigger) {
+    pendingDeleteId = id;
+    memoryDeleteDialog.hidden = false;
+    memoryDeleteStatus.textContent = "";
+    memoryDeleteConfirm.disabled = false;
+    memoryDeleteConfirm.textContent = "삭제";
+    memoryDeleteDialog.deleteTrigger = trigger;
+    document.body.classList.add("memory-delete-open");
+    memoryDeleteCancel.focus({ preventScroll: true });
+  }
+
+  function closeMemoryDeleteDialog({ restoreFocus = true } = {}) {
+    if (memoryDeleteConfirm.disabled) return;
+    const trigger = memoryDeleteDialog.deleteTrigger;
+    pendingDeleteId = null;
+    memoryDeleteDialog.deleteTrigger = null;
+    memoryDeleteDialog.hidden = true;
+    document.body.classList.remove("memory-delete-open");
+    if (restoreFocus && trigger?.isConnected) trigger.focus({ preventScroll: true });
+  }
+
+  function enableSavedMemoryLongPress(figure, item) {
+    figure.tabIndex = 0;
+    figure.setAttribute("role", "button");
+    figure.setAttribute("aria-label", "기기에 저장한 사진. 길게 누르면 삭제할 수 있어.");
+    figure.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      cancelLongPress();
+      longPressStart = { x: event.clientX, y: event.clientY };
+      longPressTimer = window.setTimeout(() => {
+        longPressTimer = null;
+        longPressStart = null;
+        navigator.vibrate?.(35);
+        openMemoryDeleteDialog(item.id, figure);
+      }, LONG_PRESS_DURATION);
+    });
+    figure.addEventListener("pointermove", (event) => {
+      if (!longPressStart) return;
+      if (Math.hypot(event.clientX - longPressStart.x, event.clientY - longPressStart.y) > 12) {
+        cancelLongPress();
+      }
+    });
+    figure.addEventListener("pointerup", cancelLongPress);
+    figure.addEventListener("pointercancel", cancelLongPress);
+    figure.addEventListener("pointerleave", cancelLongPress);
+    figure.addEventListener("contextmenu", (event) => event.preventDefault());
+    figure.addEventListener("keydown", (event) => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      event.preventDefault();
+      openMemoryDeleteDialog(item.id, figure);
+    });
+  }
+
+  function updateGalleryMeta() {
+    galleryCount.textContent = `${galleryShown} / ${galleryItems.length}`;
+    galleryMore.hidden = galleryShown >= galleryItems.length;
+    galleryStorageNote.hidden = !galleryItems.some((item) => item.saved);
+  }
+
   function createGalleryFigure(item) {
     const figure = document.createElement("figure");
     if (item.saved) figure.classList.add("is-saved-memory");
@@ -202,9 +277,11 @@
     const image = document.createElement("img");
     image.src = item.src;
     image.alt = item.saved ? "이 브라우저에 저장한 사진" : "";
+    image.draggable = false;
     image.loading = "lazy";
     image.decoding = "async";
     figure.append(image);
+    if (item.saved) enableSavedMemoryLongPress(figure, item);
     return figure;
   }
 
@@ -217,8 +294,7 @@
     });
     galleryGrid.append(fragment);
     galleryShown += nextItems.length;
-    galleryCount.textContent = `${galleryShown} / ${galleryItems.length}`;
-    galleryMore.hidden = galleryShown >= galleryItems.length;
+    updateGalleryMeta();
   }
 
   function clearUploadedCake() {
@@ -826,10 +902,55 @@
     if (galleryShown > 0) {
       galleryGrid.prepend(createGalleryFigure(item));
       galleryShown += 1;
-      galleryCount.textContent = `${galleryShown} / ${galleryItems.length}`;
-      galleryMore.hidden = galleryShown >= galleryItems.length;
+    }
+    updateGalleryMeta();
+  });
+  document.addEventListener("memory-deleted", async (event) => {
+    await savedGalleryReady;
+    const id = event.detail?.id;
+    const itemIndex = galleryItems.findIndex((item) => item.id === id);
+    if (itemIndex < 0) return;
+    const wasVisible = itemIndex < galleryShown;
+    galleryItems.splice(itemIndex, 1);
+    if (wasVisible) {
+      Array.from(galleryGrid.children).find((figure) => figure.dataset.galleryId === id)?.remove();
+      galleryShown -= 1;
+      if (galleryShown < galleryItems.length) {
+        galleryGrid.append(createGalleryFigure(galleryItems[galleryShown]));
+        galleryShown += 1;
+      }
+    }
+    updateGalleryMeta();
+  });
+  memoryDeleteBackdrop.addEventListener("click", () => closeMemoryDeleteDialog());
+  memoryDeleteCancel.addEventListener("click", () => closeMemoryDeleteDialog());
+  memoryDeleteConfirm.addEventListener("click", async () => {
+    if (!pendingDeleteId || !window.SITE_MEMORIES) return;
+    const id = pendingDeleteId;
+    memoryDeleteConfirm.disabled = true;
+    memoryDeleteCancel.disabled = true;
+    memoryDeleteConfirm.textContent = "삭제 중…";
+    memoryDeleteStatus.textContent = "이 사진 하나를 정리하고 있어.";
+    try {
+      await window.SITE_MEMORIES.delete(id);
+      memoryDeleteConfirm.disabled = false;
+      memoryDeleteCancel.disabled = false;
+      closeMemoryDeleteDialog({ restoreFocus: false });
+      modeTabs.find((tab) => tab.dataset.cameraMode === "gallery")?.focus({ preventScroll: true });
+    } catch (error) {
+      console.error(error);
+      memoryDeleteConfirm.disabled = false;
+      memoryDeleteCancel.disabled = false;
+      memoryDeleteConfirm.textContent = "다시 삭제";
+      memoryDeleteStatus.textContent = "삭제하지 못했어. 잠시 뒤 다시 눌러 줘.";
     }
   });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || memoryDeleteDialog.hidden) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeMemoryDeleteDialog();
+  }, true);
   modeTabs.forEach((tab, index) => {
     tab.addEventListener("click", () => setCaptureMode(tab.dataset.cameraMode));
     tab.addEventListener("keydown", (event) => {
