@@ -336,22 +336,29 @@
     rotationTimer = window.setTimeout(changeBackgroundSet, visibleDuration);
   }
 
-  function addPersistentMemoryCard(filename, index = persistentMemoryCards.size) {
+  function addPersistentMemoryCard(filename, index = persistentMemoryCards.size, mode = "us") {
     if (persistentMemoryCards.has(filename)) return;
     const seed = hashText(`${filename}-saved-memory`);
     const isMobile = window.innerWidth <= 720;
+    const isCake = mode === "cake";
     const card = document.createElement("div");
     card.className = "media-card saved-memory-card";
+    card.classList.toggle("is-cake-memory", isCake);
     card.dataset.memoryId = filename;
-    card.style.setProperty("--x", `${(4 + seededValue(seed, 1) * (isMobile ? 68 : 78)).toFixed(2)}%`);
-    card.style.setProperty("--y", `${(5 + seededValue(seed, 2) * 72).toFixed(2)}%`);
-    card.style.setProperty("--size", `${(isMobile ? 7.2 + seededValue(seed, 3) * 2 : 11 + seededValue(seed, 3) * 3.5).toFixed(2)}rem`);
+    card.style.setProperty("--x", `${(4 + seededValue(seed, 1) * (isMobile ? (isCake ? 74 : 68) : 78)).toFixed(2)}%`);
+    card.style.setProperty("--y", `${(3 + seededValue(seed, 2) * (isCake ? 48 : 74)).toFixed(2)}%`);
+    card.style.setProperty("--size", `${(isCake
+      ? (isMobile ? 5.6 + seededValue(seed, 3) * 1.3 : 7.5 + seededValue(seed, 3) * 2)
+      : (isMobile ? 7.2 + seededValue(seed, 3) * 2 : 11 + seededValue(seed, 3) * 3.5)
+    ).toFixed(2)}rem`);
     card.style.setProperty("--rotation", `${(-8 + seededValue(seed, 4) * 16).toFixed(1)}deg`);
     card.style.setProperty("--scale", (0.94 + seededValue(seed, 5) * 0.12).toFixed(3));
     card.style.setProperty("--opacity", (0.7 + seededValue(seed, 6) * 0.14).toFixed(3));
     card.style.setProperty("--duration", `${(18 + seededValue(seed, 7) * 12).toFixed(1)}s`);
     card.style.setProperty("--delay", `${(-seededValue(seed, 8) * 12).toFixed(1)}s`);
-    card.style.setProperty("--ratio", seededValue(seed, 9) > 0.45 ? "3 / 4" : "4 / 3");
+    card.style.setProperty("--ratio", isCake
+      ? "1200 / 3912"
+      : (seededValue(seed, 9) > 0.45 ? "3 / 4" : "4 / 3"));
     card.style.zIndex = String(10 + index);
     const visual = createMediaVisual(filename);
     visual.classList.add("is-active");
@@ -447,7 +454,7 @@
 
   async function preloadAllAssets() {
     const packagedMediaFiles = validMedia(Array.isArray(data.media) ? data.media : []);
-    const savedMediaFiles = (await memoriesReady).map((memory) => memory.id);
+    const savedMemoryViews = await memoriesReady;
     const frameFiles = Array.isArray(data.frames) ? data.frames : [];
     const cakeFiles = Array.isArray(data.cakes) ? data.cakes : [];
     const tasks = [
@@ -477,8 +484,8 @@
     }
 
     startBackgroundPlayback(packagedMediaFiles);
-    savedMediaFiles.slice().reverse().forEach((filename, index) => {
-      addPersistentMemoryCard(filename, index);
+    savedMemoryViews.slice().reverse().forEach((memory, index) => {
+      addPersistentMemoryCard(memory.id, index, memory.mode);
     });
     assetsReady = true;
     document.body.classList.remove("assets-loading");
@@ -640,7 +647,7 @@
     }
     savedMemories.unshift(record);
     const view = memoryView(record);
-    addPersistentMemoryCard(record.id);
+    addPersistentMemoryCard(record.id, persistentMemoryCards.size, record.mode);
     document.dispatchEvent(new CustomEvent("memory-saved", { detail: view }));
     return { ...view, persisted };
   }

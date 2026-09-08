@@ -155,6 +155,16 @@ body::before {
   transition: none;
 }
 
+.saved-memory-card.is-cake-memory {
+  border-bottom-width: 12px;
+  box-shadow: 0 24px 68px rgba(0, 0, 0, 0.54), 0 0 0 1px rgba(255, 244, 238, 0.1);
+}
+
+.saved-memory-card.is-cake-memory img {
+  object-fit: contain;
+  background: #fff;
+}
+
 .media-card img,
 .media-card video {
   position: absolute;
@@ -1543,19 +1553,73 @@ body.gallery-active .camera-dialog.camera-inline {
   text-align: center;
 }
 
-.camera-status.is-processing {
-  color: #ffd8e4;
-  font-weight: 600;
-  animation: camera-status-pulse 1.2s ease-in-out infinite alternate;
+.camera-processing-panel {
+  min-height: min(60vh, 32rem);
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 3rem 1.5rem;
+  color: #fff8f4;
+  text-align: center;
 }
 
-@keyframes camera-status-pulse {
-  from {
-    opacity: 0.65;
-  }
-  to {
-    opacity: 1;
-  }
+.processing-orbit {
+  position: relative;
+  width: 4.4rem;
+  height: 4.4rem;
+  margin-bottom: 1.6rem;
+  border: 1px solid rgba(233, 180, 195, 0.2);
+  border-radius: 50%;
+  animation: processing-orbit 1.8s linear infinite;
+}
+
+.processing-orbit::before,
+.processing-orbit::after,
+.processing-orbit span {
+  position: absolute;
+  border-radius: 50%;
+  content: "";
+}
+
+.processing-orbit::before {
+  inset: 0.75rem;
+  border: 1px solid rgba(233, 180, 195, 0.28);
+}
+
+.processing-orbit::after {
+  top: -0.2rem;
+  left: 50%;
+  width: 0.48rem;
+  height: 0.48rem;
+  background: #f3d4dc;
+  box-shadow: 0 0 1rem rgba(243, 212, 220, 0.8);
+  transform: translateX(-50%);
+}
+
+.processing-orbit span {
+  inset: 1.65rem;
+  background: radial-gradient(circle at 35% 30%, #f7dce4, #a43f62);
+  box-shadow: 0 0 1.5rem rgba(164, 63, 98, 0.48);
+}
+
+.processing-kicker {
+  margin: 0 0 0.65rem;
+  color: #dca0b3;
+  font: 700 0.66rem/1 "Segoe UI", sans-serif;
+  letter-spacing: 0.23em;
+}
+
+.camera-processing-panel h3 {
+  margin: 0;
+  font-size: clamp(1.65rem, 5vw, 2.2rem);
+  font-weight: 550;
+  letter-spacing: -0.045em;
+}
+
+.camera-processing-panel > p:last-child {
+  margin: 0.7rem 0 0;
+  color: rgba(255, 248, 244, 0.58);
+  font: 0.82rem/1.5 "Segoe UI", "Apple SD Gothic Neo", sans-serif;
 }
 
 .frame-controls {
@@ -1666,6 +1730,12 @@ body.gallery-active .camera-dialog.camera-inline {
   justify-content: center;
   gap: 0.65rem;
   margin-top: 1rem;
+}
+
+@keyframes processing-orbit {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .upload-button {
@@ -1823,7 +1893,8 @@ body.gallery-active .camera-dialog.camera-inline {
   }
 
   .media-card,
-  .memory-placeholder {
+  .memory-placeholder,
+  .processing-orbit {
     width: clamp(5.5rem, var(--size), 11rem);
     border-width: 4px;
     border-bottom-width: 13px;

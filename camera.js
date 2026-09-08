@@ -2,6 +2,8 @@
   "use strict";
 
   const livePanel = document.getElementById("camera-live-panel");
+  const processingPanel = document.getElementById("camera-processing-panel");
+  const processingMessage = document.getElementById("camera-processing-message");
   const resultPanel = document.getElementById("camera-result-panel");
   const cameraFrame = document.querySelector(".camera-frame");
   const photoArea = document.getElementById("camera-photo-area");
@@ -46,6 +48,7 @@
   let frameImage = new Image();
   let stream = null;
   let cameraRequestId = 0;
+  let captureRequestId = 0;
   let facingMode = "user";
   let captureMode = "cake";
   let cameraUnlocked = false;
@@ -53,6 +56,7 @@
   let photoBlob = null;
   let savedPhotoId = null;
   let savingPhoto = false;
+  let isProcessing = false;
   let uploadedCakeImage = null;
   let uploadedCakeUrl = null;
   let selectedFrame = availableFrames[0] || "";
@@ -250,6 +254,24 @@
     }
   }
 
+  function showProcessingScreen(mode) {
+    isProcessing = true;
+    modeTabs.forEach((tab) => { tab.disabled = true; });
+    processingMessage.textContent = mode === "cake"
+      ? "과거의 케이크와 오늘의 케이크를 이어 붙이고 있어 :)"
+      : "프레임과 문구를 예쁘게 담고 있어 :)";
+    livePanel.hidden = true;
+    resultPanel.hidden = true;
+    galleryPanel.hidden = true;
+    processingPanel.hidden = false;
+  }
+
+  function hideProcessingScreen() {
+    isProcessing = false;
+    processingPanel.hidden = true;
+    modeTabs.forEach((tab) => { tab.disabled = false; });
+  }
+
   function clearResult() {
     if (photoUrl) {
       URL.revokeObjectURL(photoUrl);
@@ -260,15 +282,16 @@
     savingPhoto = false;
     capturedImage.removeAttribute("src");
     savedPhotoStatus.textContent = "";
+    hideProcessingScreen();
     resultPanel.hidden = true;
     livePanel.hidden = false;
     status.hidden = true;
     status.textContent = "";
-    status.classList.remove("is-processing");
     takeButton.textContent = captureMode === "cake" ? "케이크 촬영" : "오늘 촬영";
   }
 
   function setCaptureMode(mode, { restartFromResult = true } = {}) {
+    if (isProcessing) return;
     if (!["cake", "us", "gallery"].includes(mode)) return;
     const previousMode = captureMode;
     const wasShowingResult = !resultPanel.hidden;
@@ -583,34 +606,37 @@
     const hasLiveCamera = Boolean(stream && video.videoWidth);
     if ((captureMode === "cake" && !uploadedCakeImage && !hasLiveCamera)
       || (captureMode === "us" && !hasLiveCamera)) return;
+    const processingMode = captureMode;
+    const requestId = ++captureRequestId;
     takeButton.disabled = true;
     takeButton.textContent = "처리중…";
     switchButton.disabled = true;
-    status.hidden = false;
-    status.classList.add("is-processing");
-    status.textContent = captureMode === "cake"
-      ? "처리중… 과거 케이크 사진들과 합치고 있어 :)"
-      : "처리중… 사진을 완성하고 있어 :)";
+    status.hidden = true;
+    status.textContent = "";
+    showProcessingScreen(processingMode);
 
     await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 40)));
 
     try {
-      if (captureMode === "cake") {
+      if (processingMode === "cake") {
         await drawCakeStrip();
       } else {
         await ensureFrameReady();
         await ensureCaptionFontReady();
         drawPolaroid();
       }
+      if (requestId !== captureRequestId) return;
 
       canvas.toBlob((blob) => {
+        if (requestId !== captureRequestId) return;
         switchButton.disabled = false;
-        status.classList.remove("is-processing");
+        hideProcessingScreen();
         if (!blob) {
+          livePanel.hidden = false;
           status.hidden = false;
           status.textContent = "사진을 만들지 못했어. 한 번 더 촬영해 줘.";
           takeButton.disabled = false;
-          takeButton.textContent = captureMode === "cake" ? "케이크 촬영" : "오늘 촬영";
+          takeButton.textContent = processingMode === "cake" ? "케이크 촬영" : "오늘 촬영";
           return;
         }
         if (photoUrl) URL.revokeObjectURL(photoUrl);
@@ -620,7 +646,7 @@
         photoUrl = URL.createObjectURL(blob);
         capturedImage.src = photoUrl;
         downloadLink.href = photoUrl;
-        const isCake = captureMode === "cake";
+        const isCake = processingMode === "cake";
         downloadLink.dataset.captureMode = isCake ? "cake" : "us";
         downloadLink.download = createDownloadFilename(downloadLink.dataset.captureMode);
         capturedImage.alt = isCake
@@ -636,13 +662,15 @@
         retakeButton.focus();
       }, "image/png");
     } catch (error) {
+      if (requestId !== captureRequestId) return;
       console.error(error);
       switchButton.disabled = false;
-      status.classList.remove("is-processing");
+      hideProcessingScreen();
+      livePanel.hidden = false;
       status.hidden = false;
       status.textContent = "사진 재료를 준비하지 못했어. 페이지를 새로 열고 다시 촬영해 줘.";
       takeButton.disabled = false;
-      takeButton.textContent = captureMode === "cake" ? "케이크 촬영" : "오늘 촬영";
+      takeButton.textContent = processingMode === "cake" ? "케이크 촬영" : "오늘 촬영";
     }
   }
 
@@ -822,6 +850,7 @@
   document.addEventListener("feature-opened", (event) => {
     cameraUnlocked = false;
     stopCamera();
+    hideProcessingScreen();
     if (!resultPanel.hidden) clearResult();
     const requestedMode = event.detail?.mode;
     setCaptureMode(["cake", "us", "gallery"].includes(requestedMode) ? requestedMode : "cake", {
@@ -831,8 +860,10 @@
     if (captureMode !== "gallery") resumeLiveSource();
   });
   document.addEventListener("feature-closed", () => {
+    captureRequestId += 1;
     cameraUnlocked = false;
     stopCamera();
+    hideProcessingScreen();
     if (!resultPanel.hidden) clearResult();
     clearUploadedCake();
     galleryPanel.hidden = true;
