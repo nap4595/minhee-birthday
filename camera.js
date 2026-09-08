@@ -780,7 +780,7 @@
       );
       if (photoBlob === blobToSave) savedPhotoId = memory.id;
       savedPhotoStatus.textContent = memory.persisted
-        ? "저장 완료 · 이 브라우저의 갤러리와 배경에도 추가했어."
+        ? "저장 완료 · 메인 배경에서 사진을 드래그해 옮길 수도 있어."
         : "파일은 저장했고, 이번 화면의 갤러리와 배경에 추가했어.";
     } catch (error) {
       console.error(error);

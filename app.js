@@ -39,6 +39,8 @@
   let backgroundCards = [];
   let backgroundCursor = 0;
   const persistentMemoryCards = new Map();
+  let savedMemoryDrag = null;
+  let suppressPresentationClick = false;
   let musicWasManuallyPaused = false;
   let assetsReady = false;
   let rotationTimer = null;
@@ -167,7 +169,10 @@
       id: record.id,
       src: url,
       mode: record.mode,
-      createdAt: record.createdAt
+      createdAt: record.createdAt,
+      position: record.position
+        ? { x: Number(record.position.x), y: Number(record.position.y) }
+        : null
     };
   }
 
@@ -347,17 +352,26 @@
     rotationTimer = window.setTimeout(changeBackgroundSet, visibleDuration);
   }
 
-  function addPersistentMemoryCard(filename, index = persistentMemoryCards.size, mode = "us") {
+  function addPersistentMemoryCard(filename, index = persistentMemoryCards.size, mode = "us", position = null) {
     if (persistentMemoryCards.has(filename)) return;
     const seed = hashText(`${filename}-saved-memory`);
     const isMobile = window.innerWidth <= 720;
     const isCake = mode === "cake";
+    const defaultX = 4 + seededValue(seed, 1) * (isMobile ? (isCake ? 74 : 68) : 78);
+    const defaultY = 3 + seededValue(seed, 2) * (isCake ? 48 : 74);
+    const savedX = Number(position?.x);
+    const savedY = Number(position?.y);
+    const x = Number.isFinite(savedX) ? Math.min(100, Math.max(0, savedX)) : defaultX;
+    const y = Number.isFinite(savedY) ? Math.min(100, Math.max(0, savedY)) : defaultY;
     const card = document.createElement("div");
     card.className = "media-card saved-memory-card";
     card.classList.toggle("is-cake-memory", isCake);
+    card.classList.toggle("is-us-memory", !isCake);
     card.dataset.memoryId = filename;
-    card.style.setProperty("--x", `${(4 + seededValue(seed, 1) * (isMobile ? (isCake ? 74 : 68) : 78)).toFixed(2)}%`);
-    card.style.setProperty("--y", `${(3 + seededValue(seed, 2) * (isCake ? 48 : 74)).toFixed(2)}%`);
+    card.dataset.memoryX = x.toFixed(3);
+    card.dataset.memoryY = y.toFixed(3);
+    card.style.setProperty("--x", `${x.toFixed(3)}%`);
+    card.style.setProperty("--y", `${y.toFixed(3)}%`);
     card.style.setProperty("--size", `${(isCake
       ? (isMobile ? 5.6 + seededValue(seed, 3) * 1.3 : 7.5 + seededValue(seed, 3) * 2)
       : (isMobile ? 7.2 + seededValue(seed, 3) * 2 : 11 + seededValue(seed, 3) * 3.5)
@@ -369,7 +383,7 @@
     card.style.setProperty("--delay", `${(-seededValue(seed, 8) * 12).toFixed(1)}s`);
     card.style.setProperty("--ratio", isCake
       ? "1200 / 3912"
-      : (seededValue(seed, 9) > 0.45 ? "3 / 4" : "4 / 3"));
+      : "1200 / 1500");
     card.style.zIndex = String(10 + index);
     const visual = createMediaVisual(filename);
     visual.classList.add("is-active");
@@ -496,7 +510,7 @@
 
     startBackgroundPlayback(packagedMediaFiles);
     savedMemoryViews.slice().reverse().forEach((memory, index) => {
-      addPersistentMemoryCard(memory.id, index, memory.mode);
+      addPersistentMemoryCard(memory.id, index, memory.mode, memory.position);
     });
     assetsReady = true;
     document.body.classList.remove("assets-loading");
@@ -659,9 +673,105 @@
     record.persisted = persisted;
     savedMemories.unshift(record);
     const view = memoryView(record);
-    addPersistentMemoryCard(record.id, persistentMemoryCards.size, record.mode);
+    addPersistentMemoryCard(record.id, persistentMemoryCards.size, record.mode, record.position);
     document.dispatchEvent(new CustomEvent("memory-saved", { detail: view }));
     return { ...view, persisted };
+  }
+
+  async function moveMemory(id, position) {
+    await memoriesReady;
+    const record = savedMemories.find((memory) => memory.id === id);
+    if (!record) return null;
+    const x = Number(position?.x);
+    const y = Number(position?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    record.position = {
+      x: Math.min(100, Math.max(0, x)),
+      y: Math.min(100, Math.max(0, y))
+    };
+    if (record.persisted !== false) {
+      try {
+        await persistMemory(record);
+      } catch (error) {
+        console.warn("사진 위치를 이 브라우저에 보관하지 못했습니다.", error);
+      }
+    }
+    return { ...record.position };
+  }
+
+  function savedMemoryAtPoint(x, y) {
+    return Array.from(persistentMemoryCards.values())
+      .sort((first, second) => Number(second.style.zIndex) - Number(first.style.zIndex))
+      .find((card) => {
+        const rect = card.getBoundingClientRect();
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+      }) || null;
+  }
+
+  function beginSavedMemoryDrag(event) {
+    if (event.button !== 0 || event.isPrimary === false) return;
+    if (!document.body.classList.contains("main-active")
+      || document.body.classList.contains("feature-menu-open")) return;
+    if (event.target.closest("a, input, textarea, select, .open-features, .top-controls")) return;
+    const card = savedMemoryAtPoint(event.clientX, event.clientY);
+    if (!card) return;
+    const stageRect = photoStage.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    savedMemoryDrag = {
+      pointerId: event.pointerId,
+      captureTarget: event.target,
+      card,
+      stageRect,
+      startPointerX: event.clientX,
+      startPointerY: event.clientY,
+      startX: Number(card.dataset.memoryX),
+      startY: Number(card.dataset.memoryY),
+      minimumDx: stageRect.left - cardRect.left,
+      maximumDx: stageRect.right - cardRect.right,
+      minimumDy: stageRect.top - cardRect.top,
+      maximumDy: stageRect.bottom - cardRect.bottom,
+      moved: false
+    };
+    card.classList.add("is-dragging");
+    event.target.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function moveSavedMemoryDrag(event) {
+    if (!savedMemoryDrag || event.pointerId !== savedMemoryDrag.pointerId) return;
+    const drag = savedMemoryDrag;
+    const rawDx = event.clientX - drag.startPointerX;
+    const rawDy = event.clientY - drag.startPointerY;
+    const dx = Math.min(drag.maximumDx, Math.max(drag.minimumDx, rawDx));
+    const dy = Math.min(drag.maximumDy, Math.max(drag.minimumDy, rawDy));
+    const x = drag.startX + dx / drag.stageRect.width * 100;
+    const y = drag.startY + dy / drag.stageRect.height * 100;
+    drag.moved ||= Math.hypot(rawDx, rawDy) > 4;
+    drag.card.dataset.memoryX = x.toFixed(3);
+    drag.card.dataset.memoryY = y.toFixed(3);
+    drag.card.style.setProperty("--x", `${x.toFixed(3)}%`);
+    drag.card.style.setProperty("--y", `${y.toFixed(3)}%`);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function finishSavedMemoryDrag(event) {
+    if (!savedMemoryDrag || event.pointerId !== savedMemoryDrag.pointerId) return;
+    const drag = savedMemoryDrag;
+    savedMemoryDrag = null;
+    drag.card.classList.remove("is-dragging");
+    drag.captureTarget.releasePointerCapture?.(event.pointerId);
+    if (drag.moved) {
+      suppressPresentationClick = true;
+      window.setTimeout(() => { suppressPresentationClick = false; }, 0);
+      void moveMemory(drag.card.dataset.memoryId, {
+        x: Number(drag.card.dataset.memoryX),
+        y: Number(drag.card.dataset.memoryY)
+      });
+    }
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   async function deleteMemory(id) {
@@ -697,8 +807,20 @@
     ready: memoriesReady,
     list: () => savedMemories.map(memoryView),
     save: saveMemory,
+    move: moveMemory,
     delete: deleteMemory
   };
+
+  document.addEventListener("pointerdown", beginSavedMemoryDrag, { capture: true });
+  document.addEventListener("pointermove", moveSavedMemoryDrag, { capture: true, passive: false });
+  document.addEventListener("pointerup", finishSavedMemoryDrag, { capture: true });
+  document.addEventListener("pointercancel", finishSavedMemoryDrag, { capture: true });
+  document.addEventListener("click", (event) => {
+    if (!suppressPresentationClick) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    suppressPresentationClick = false;
+  }, true);
 
   updateRelationshipDays();
   anniversaryForm?.addEventListener("submit", unlockCamera);

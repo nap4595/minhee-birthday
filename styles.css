@@ -169,6 +169,34 @@ body::before {
   background: #fff;
 }
 
+.saved-memory-card.is-us-memory {
+  border-bottom-width: 14px;
+}
+
+.saved-memory-card.is-us-memory img {
+  object-fit: contain;
+  background: #fff;
+}
+
+.main-active .home-view {
+  touch-action: none;
+}
+
+.main-active .saved-memory-card {
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.saved-memory-card.is-dragging {
+  z-index: 99 !important;
+  cursor: grabbing;
+  animation-play-state: paused;
+  filter: drop-shadow(0 1.2rem 1.5rem rgba(0, 0, 0, 0.34));
+}
+
 .media-card img,
 .media-card video {
   position: absolute;
