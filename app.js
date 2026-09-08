@@ -38,6 +38,7 @@
   let backgroundItems = [];
   let backgroundCards = [];
   let backgroundCursor = 0;
+  const persistentMemoryCards = new Map();
   let musicWasManuallyPaused = false;
   let assetsReady = false;
   let rotationTimer = null;
@@ -335,14 +336,28 @@
     rotationTimer = window.setTimeout(changeBackgroundSet, visibleDuration);
   }
 
-  function addMemoryToBackground(filename) {
-    backgroundItems = [filename, ...backgroundItems.filter((item) => item !== filename)];
-    if (!backgroundCards.length) {
-      if (!photoStage.children.length) startBackgroundPlayback(backgroundItems);
-      return;
-    }
-    replaceCardMedia(backgroundCards[0], filename);
-    backgroundCursor = Math.min(backgroundCursor + 1, backgroundItems.length - 1);
+  function addPersistentMemoryCard(filename, index = persistentMemoryCards.size) {
+    if (persistentMemoryCards.has(filename)) return;
+    const seed = hashText(`${filename}-saved-memory`);
+    const isMobile = window.innerWidth <= 720;
+    const card = document.createElement("div");
+    card.className = "media-card saved-memory-card";
+    card.dataset.memoryId = filename;
+    card.style.setProperty("--x", `${(4 + seededValue(seed, 1) * (isMobile ? 68 : 78)).toFixed(2)}%`);
+    card.style.setProperty("--y", `${(5 + seededValue(seed, 2) * 72).toFixed(2)}%`);
+    card.style.setProperty("--size", `${(isMobile ? 7.2 + seededValue(seed, 3) * 2 : 11 + seededValue(seed, 3) * 3.5).toFixed(2)}rem`);
+    card.style.setProperty("--rotation", `${(-8 + seededValue(seed, 4) * 16).toFixed(1)}deg`);
+    card.style.setProperty("--scale", (0.94 + seededValue(seed, 5) * 0.12).toFixed(3));
+    card.style.setProperty("--opacity", (0.7 + seededValue(seed, 6) * 0.14).toFixed(3));
+    card.style.setProperty("--duration", `${(18 + seededValue(seed, 7) * 12).toFixed(1)}s`);
+    card.style.setProperty("--delay", `${(-seededValue(seed, 8) * 12).toFixed(1)}s`);
+    card.style.setProperty("--ratio", seededValue(seed, 9) > 0.45 ? "3 / 4" : "4 / 3");
+    card.style.zIndex = String(10 + index);
+    const visual = createMediaVisual(filename);
+    visual.classList.add("is-active");
+    card.append(visual);
+    photoStage.append(card);
+    persistentMemoryCards.set(filename, card);
   }
 
   function preloadImage(url) {
@@ -461,7 +476,10 @@
       await Promise.all(batch);
     }
 
-    startBackgroundPlayback([...savedMediaFiles, ...packagedMediaFiles]);
+    startBackgroundPlayback(packagedMediaFiles);
+    savedMediaFiles.slice().reverse().forEach((filename, index) => {
+      addPersistentMemoryCard(filename, index);
+    });
     assetsReady = true;
     document.body.classList.remove("assets-loading");
     document.body.classList.add("assets-ready");
@@ -622,7 +640,7 @@
     }
     savedMemories.unshift(record);
     const view = memoryView(record);
-    addMemoryToBackground(record.id);
+    addPersistentMemoryCard(record.id);
     document.dispatchEvent(new CustomEvent("memory-saved", { detail: view }));
     return { ...view, persisted };
   }

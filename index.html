@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260908-2" />
+    <link rel="stylesheet" href="styles.css?v=20260908-3" />
   </head>
   <body class="photo-only gate-locked assets-loading">
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -80,15 +80,35 @@
         <section class="feature-sheet" role="dialog" aria-modal="true" aria-label="기능 선택">
           <div class="feature-sheet-handle" aria-hidden="true"></div>
           <button id="close-feature-menu" class="feature-menu-close" type="button" aria-label="기능 메뉴 닫기">×</button>
+          <header class="feature-sheet-heading">
+            <p>OUR BIRTHDAY MOMENTS</p>
+            <h2>어떤 추억을 남길까?</h2>
+            <span>오늘을 예쁘게 기록해 두자</span>
+          </header>
           <div class="feature-choices">
             <button class="feature-choice" type="button" data-open-feature="cake">
-              <strong>케이크 사진</strong>
+              <span class="feature-choice-number" aria-hidden="true">01</span>
+              <span class="feature-choice-copy">
+                <strong>케이크 사진</strong>
+                <small>사진을 찍거나 올려서<br />생일 케이크 기록 남기기</small>
+              </span>
+              <span class="feature-choice-arrow" aria-hidden="true">↗</span>
             </button>
             <button class="feature-choice" type="button" data-open-feature="us">
-              <strong>오늘의 우리</strong>
+              <span class="feature-choice-number" aria-hidden="true">02</span>
+              <span class="feature-choice-copy">
+                <strong>오늘의 우리</strong>
+                <small>프레임과 문구를 골라<br />폴라로이드 만들기</small>
+              </span>
+              <span class="feature-choice-arrow" aria-hidden="true">↗</span>
             </button>
             <button class="feature-choice" type="button" data-open-feature="gallery">
-              <strong>Gallery</strong>
+              <span class="feature-choice-number" aria-hidden="true">03</span>
+              <span class="feature-choice-copy">
+                <strong>Gallery</strong>
+                <small>함께 쌓아 온<br />우리의 순간 다시 보기</small>
+              </span>
+              <span class="feature-choice-arrow" aria-hidden="true">↗</span>
             </button>
           </div>
         </section>
@@ -161,7 +181,7 @@
     </noscript>
 
     <script src="site-data.js?v=20260908"></script>
-    <script src="app.js?v=20260908-2"></script>
+    <script src="app.js?v=20260908-3"></script>
     <script src="camera.js?v=20260908-2"></script>
   </body>
 </html>
