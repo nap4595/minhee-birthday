@@ -12,14 +12,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260905-2" />
+    <link rel="stylesheet" href="styles.css?v=20260908-2" />
   </head>
   <body class="photo-only gate-locked assets-loading">
     <div class="ambient ambient-one" aria-hidden="true"></div>
     <div class="ambient ambient-two" aria-hidden="true"></div>
     <div id="photo-stage" class="photo-stage" aria-hidden="true"></div>
     <div class="background-veil" aria-hidden="true"></div>
-    <audio id="background-music" src="riverbend-serenade.mp3" loop preload="none"></audio>
+    <audio id="background-music" src="song.mp3" loop preload="none"></audio>
     <div class="top-controls">
       <button id="back-to-main" class="back-to-main" type="button" hidden>← 메인</button>
       <button id="music-toggle" class="music-toggle" type="button" aria-pressed="false" disabled>
@@ -118,6 +118,7 @@
           <div class="camera-frame is-cake-mode">
             <div id="camera-photo-area" class="camera-photo-area">
               <video id="camera-video" autoplay muted playsinline></video>
+              <img id="cake-upload-preview" class="cake-upload-preview" alt="올린 케이크 사진 미리보기" hidden />
               <img id="camera-overlay" class="camera-overlay" alt="" hidden />
             </div>
             <div class="camera-writing" hidden>
@@ -133,6 +134,8 @@
           </section>
           <div class="camera-actions">
             <button id="switch-camera" class="secondary-button" type="button">카메라 전환</button>
+            <button id="cake-upload-control" class="secondary-button upload-button" type="button">사진 올리기</button>
+            <input id="cake-photo-upload" type="file" accept="image/*" hidden />
             <button id="take-photo" class="primary-button shutter-button" type="button" disabled>촬영</button>
           </div>
         </div>
@@ -145,6 +148,7 @@
             <button id="retake-photo" class="secondary-button" type="button">다시 찍기</button>
             <a id="download-photo" class="primary-button" download="minhee-birthday-cakes-2024-2026.png">사진 저장</a>
           </div>
+          <p id="saved-photo-status" class="saved-photo-status" aria-live="polite"></p>
         </div>
 
         <canvas id="photo-canvas" width="1200" height="1500" hidden></canvas>
@@ -156,8 +160,8 @@
       <p class="noscript">사진 촬영 기능을 사용하려면 브라우저에서 JavaScript를 켜 주세요.</p>
     </noscript>
 
-    <script src="site-data.js?v=20260905-2"></script>
-    <script src="app.js?v=20260905-2"></script>
-    <script src="camera.js?v=20260905-2"></script>
+    <script src="site-data.js?v=20260908"></script>
+    <script src="app.js?v=20260908-2"></script>
+    <script src="camera.js?v=20260908-2"></script>
   </body>
 </html>

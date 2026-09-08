@@ -32,6 +32,12 @@
   const cachedImages = new Map();
   const resolvedMediaUrls = new Map();
   const objectUrls = [];
+  const MEMORY_DATABASE = "minhee-birthday-memories";
+  const MEMORY_STORE = "photos";
+  let savedMemories = [];
+  let backgroundItems = [];
+  let backgroundCards = [];
+  let backgroundCursor = 0;
   let musicWasManuallyPaused = false;
   let assetsReady = false;
   let rotationTimer = null;
@@ -94,6 +100,75 @@
     return assetUrl("img-preview", filename);
   }
 
+  function openMemoryDatabase() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) {
+        reject(new Error("이 브라우저에서는 사진 보관함을 사용할 수 없습니다."));
+        return;
+      }
+      const request = window.indexedDB.open(MEMORY_DATABASE, 1);
+      request.onupgradeneeded = () => {
+        const database = request.result;
+        if (!database.objectStoreNames.contains(MEMORY_STORE)) {
+          const store = database.createObjectStore(MEMORY_STORE, { keyPath: "id" });
+          store.createIndex("createdAt", "createdAt");
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error("사진 보관함을 열지 못했습니다."));
+    });
+  }
+
+  const memoryDatabase = openMemoryDatabase();
+
+  async function readSavedMemories() {
+    const database = await memoryDatabase;
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(MEMORY_STORE, "readonly");
+      const request = transaction.objectStore(MEMORY_STORE).getAll();
+      request.onsuccess = () => {
+        resolve((request.result || []).sort((first, second) => second.createdAt - first.createdAt));
+      };
+      request.onerror = () => reject(request.error || new Error("저장된 사진을 읽지 못했습니다."));
+    });
+  }
+
+  async function persistMemory(record) {
+    const database = await memoryDatabase;
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(MEMORY_STORE, "readwrite");
+      transaction.objectStore(MEMORY_STORE).put(record);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error || new Error("사진을 보관하지 못했습니다."));
+      transaction.onabort = () => reject(transaction.error || new Error("사진 보관이 중단되었습니다."));
+    });
+  }
+
+  function memoryView(record) {
+    let url = resolvedMediaUrls.get(record.id);
+    if (!url) {
+      url = URL.createObjectURL(record.blob);
+      objectUrls.push(url);
+      resolvedMediaUrls.set(record.id, url);
+    }
+    return {
+      id: record.id,
+      src: url,
+      mode: record.mode,
+      createdAt: record.createdAt
+    };
+  }
+
+  const memoriesReady = readSavedMemories()
+    .then((records) => {
+      savedMemories = records;
+      return records.map(memoryView);
+    })
+    .catch((error) => {
+      console.warn("저장된 사진을 불러오지 못했습니다.", error);
+      return [];
+    });
+
   function validMedia(files) {
     return files.filter((file) => {
       const extension = extensionOf(file);
@@ -149,8 +224,8 @@
   }
 
   function startBackgroundPlayback(files) {
-    const items = validMedia(files);
-    if (!items.length) {
+    backgroundItems = validMedia(files);
+    if (!backgroundItems.length) {
       addFallbackMemories();
       return;
     }
@@ -158,7 +233,7 @@
     const isMobile = window.innerWidth <= 720;
     const isPortrait = window.innerHeight > window.innerWidth;
     const targetCount = isMobile ? 24 : 28;
-    const slotCount = Math.min(targetCount, items.length);
+    const slotCount = Math.min(targetCount, backgroundItems.length);
 
     // Determine grid columns and rows to distribute photos across the screen
     let cols, rows;
@@ -184,7 +259,7 @@
 
     const cards = [];
     for (let index = 0; index < slotCount; index += 1) {
-      const filename = items[index];
+      const filename = backgroundItems[index];
       const seed = hashText(`${filename}-${index}`);
       const card = document.createElement("div");
       card.className = "media-card";
@@ -237,9 +312,10 @@
       photoStage.append(card);
       cards.push(card);
     }
+    backgroundCards = cards;
+    backgroundCursor = slotCount;
 
-    if (items.length <= slotCount) return;
-    let cursor = slotCount;
+    if (backgroundItems.length <= slotCount) return;
     const fadeDuration = reduceMotion ? 0 : 1800;
     const visibleDuration = 3000;
 
@@ -247,9 +323,9 @@
       photoStage.classList.add("is-changing");
       rotationTimer = window.setTimeout(() => {
         cards.forEach((card, index) => {
-          replaceCardMedia(card, items[(cursor + index) % items.length]);
+          replaceCardMedia(card, backgroundItems[(backgroundCursor + index) % backgroundItems.length]);
         });
-        cursor = (cursor + slotCount) % items.length;
+        backgroundCursor = (backgroundCursor + slotCount) % backgroundItems.length;
         void photoStage.offsetWidth;
         photoStage.classList.remove("is-changing");
         rotationTimer = window.setTimeout(changeBackgroundSet, visibleDuration + fadeDuration);
@@ -257,6 +333,16 @@
     }
 
     rotationTimer = window.setTimeout(changeBackgroundSet, visibleDuration);
+  }
+
+  function addMemoryToBackground(filename) {
+    backgroundItems = [filename, ...backgroundItems.filter((item) => item !== filename)];
+    if (!backgroundCards.length) {
+      if (!photoStage.children.length) startBackgroundPlayback(backgroundItems);
+      return;
+    }
+    replaceCardMedia(backgroundCards[0], filename);
+    backgroundCursor = Math.min(backgroundCursor + 1, backgroundItems.length - 1);
   }
 
   function preloadImage(url) {
@@ -345,13 +431,14 @@
   }
 
   async function preloadAllAssets() {
-    const mediaFiles = validMedia(Array.isArray(data.media) ? data.media : []);
+    const packagedMediaFiles = validMedia(Array.isArray(data.media) ? data.media : []);
+    const savedMediaFiles = (await memoriesReady).map((memory) => memory.id);
     const frameFiles = Array.isArray(data.frames) ? data.frames : [];
     const cakeFiles = Array.isArray(data.cakes) ? data.cakes : [];
     const tasks = [
       () => preloadMusic(),
       () => preloadFonts(),
-      ...mediaFiles.map((filename) => () => preloadMedia(filename)),
+      ...packagedMediaFiles.map((filename) => () => preloadMedia(filename)),
       ...frameFiles.map((filename) => () => preloadImage(assetUrl("frame", filename))),
       ...cakeFiles.map((filename) => () => preloadImage(assetUrl("과거생일케이크", filename)))
     ];
@@ -374,7 +461,7 @@
       await Promise.all(batch);
     }
 
-    startBackgroundPlayback(mediaFiles);
+    startBackgroundPlayback([...savedMediaFiles, ...packagedMediaFiles]);
     assetsReady = true;
     document.body.classList.remove("assets-loading");
     document.body.classList.add("assets-ready");
@@ -516,12 +603,41 @@
     }, reduceMotion ? 50 : 760);
   }
 
+  async function saveMemory(blob, mode) {
+    await memoriesReady;
+    const uniquePart = window.crypto?.randomUUID?.()
+      || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const record = {
+      id: `saved-${uniquePart}.png`,
+      blob,
+      mode: mode === "cake" ? "cake" : "us",
+      createdAt: Date.now()
+    };
+    let persisted = true;
+    try {
+      await persistMemory(record);
+    } catch (error) {
+      persisted = false;
+      console.warn("사진을 이 브라우저에 계속 보관하지 못했습니다.", error);
+    }
+    savedMemories.unshift(record);
+    const view = memoryView(record);
+    addMemoryToBackground(record.id);
+    document.dispatchEvent(new CustomEvent("memory-saved", { detail: view }));
+    return { ...view, persisted };
+  }
+
   const readyPromise = preloadAllAssets();
   window.SITE_ASSETS = {
     ready: readyPromise,
     getImage: (url) => cachedImages.get(url) || null,
     assetUrl,
     mediaUrl: (filename) => resolvedMediaUrls.get(filename) || mediaUrl(filename)
+  };
+  window.SITE_MEMORIES = {
+    ready: memoriesReady,
+    list: () => savedMemories.map(memoryView),
+    save: saveMemory
   };
 
   updateRelationshipDays();

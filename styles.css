@@ -1371,6 +1371,18 @@ body.gallery-active .camera-dialog.camera-inline {
   transform: scaleX(-1);
 }
 
+.cake-upload-preview {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.cake-upload-preview[hidden],
+.camera-photo-area.has-uploaded-cake video {
+  display: none;
+}
+
 .camera-frame.is-environment .camera-photo-area video {
   transform: none;
 }
@@ -1566,6 +1578,21 @@ body.gallery-active .camera-dialog.camera-inline {
   justify-content: center;
   gap: 0.65rem;
   margin-top: 1rem;
+}
+
+.upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.saved-photo-status {
+  min-height: 1.3rem;
+  margin: 0.8rem 0 0;
+  color: rgba(255, 248, 244, 0.7);
+  font: 0.78rem/1.55 "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+  text-align: center;
 }
 
 .shutter-button {

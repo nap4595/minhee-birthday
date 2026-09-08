@@ -9,11 +9,15 @@
   const frameOptions = document.getElementById("frame-options");
   const frameControls = document.getElementById("frame-controls");
   const video = document.getElementById("camera-video");
+  const cakeUploadControl = document.getElementById("cake-upload-control");
+  const cakePhotoUpload = document.getElementById("cake-photo-upload");
+  const cakeUploadPreview = document.getElementById("cake-upload-preview");
   const status = document.getElementById("camera-status");
   const switchButton = document.getElementById("switch-camera");
   const takeButton = document.getElementById("take-photo");
   const retakeButton = document.getElementById("retake-photo");
   const downloadLink = document.getElementById("download-photo");
+  const savedPhotoStatus = document.getElementById("saved-photo-status");
   let downloadSequence = 0;
   const capturedImage = document.getElementById("captured-image");
   const captionInput = document.getElementById("photo-caption");
@@ -33,7 +37,7 @@
     .slice()
     .sort((first, second) => first.localeCompare(second, "ko", { numeric: true }));
   const galleryExtensions = new Set(["jpg", "jpeg", "png", "webp", "gif", "avif"]);
-  const galleryFiles = (Array.isArray(siteData.media) ? siteData.media : [])
+  const packagedGalleryFiles = (Array.isArray(siteData.media) ? siteData.media : [])
     .filter((filename) => galleryExtensions.has(filename.split(".").pop().toLowerCase()));
 
   const DEFAULT_FRAME_STATE = Object.freeze({ x: 50, y: 32, scale: 72 });
@@ -46,12 +50,33 @@
   let captureMode = "cake";
   let cameraUnlocked = false;
   let photoUrl = null;
+  let photoBlob = null;
+  let savedPhotoId = null;
+  let savingPhoto = false;
+  let uploadedCakeImage = null;
+  let uploadedCakeUrl = null;
   let selectedFrame = availableFrames[0] || "";
   let frameState = { ...DEFAULT_FRAME_STATE };
   let dragStart = null;
   let pinchStart = null;
   let galleryShown = 0;
+  let galleryItems = packagedGalleryFiles.map((filename) => ({
+    id: `packaged:${filename}`,
+    src: window.SITE_ASSETS?.mediaUrl(filename) || assetUrl("img-preview", filename)
+  }));
   const activePointers = new Map();
+  const savedGalleryReady = window.SITE_MEMORIES
+    ? window.SITE_MEMORIES.ready.then(() => {
+      galleryItems = [
+        ...window.SITE_MEMORIES.list().map((memory) => ({
+          id: memory.id,
+          src: memory.src,
+          saved: true
+        })),
+        ...galleryItems
+      ];
+    })
+    : Promise.resolve();
 
   function clamp(value, minimum, maximum) {
     return Math.min(maximum, Math.max(minimum, value));
@@ -166,23 +191,63 @@
     selectFrame(selectedFrame);
   }
 
-  function renderMoreGalleryPhotos() {
-    const nextFiles = galleryFiles.slice(galleryShown, galleryShown + GALLERY_BATCH_SIZE);
+  function createGalleryFigure(item) {
+    const figure = document.createElement("figure");
+    if (item.saved) figure.classList.add("is-saved-memory");
+    figure.dataset.galleryId = item.id;
+    const image = document.createElement("img");
+    image.src = item.src;
+    image.alt = item.saved ? "이 브라우저에 저장한 사진" : "";
+    image.loading = "lazy";
+    image.decoding = "async";
+    figure.append(image);
+    return figure;
+  }
+
+  async function renderMoreGalleryPhotos() {
+    await savedGalleryReady;
+    const nextItems = galleryItems.slice(galleryShown, galleryShown + GALLERY_BATCH_SIZE);
     const fragment = document.createDocumentFragment();
-    nextFiles.forEach((filename) => {
-      const figure = document.createElement("figure");
-      const image = document.createElement("img");
-      image.src = window.SITE_ASSETS?.mediaUrl(filename) || assetUrl("img-preview", filename);
-      image.alt = "";
-      image.loading = "lazy";
-      image.decoding = "async";
-      figure.append(image);
-      fragment.append(figure);
+    nextItems.forEach((item) => {
+      fragment.append(createGalleryFigure(item));
     });
     galleryGrid.append(fragment);
-    galleryShown += nextFiles.length;
-    galleryCount.textContent = `${galleryShown} / ${galleryFiles.length}`;
-    galleryMore.hidden = galleryShown >= galleryFiles.length;
+    galleryShown += nextItems.length;
+    galleryCount.textContent = `${galleryShown} / ${galleryItems.length}`;
+    galleryMore.hidden = galleryShown >= galleryItems.length;
+  }
+
+  function clearUploadedCake() {
+    if (uploadedCakeUrl) URL.revokeObjectURL(uploadedCakeUrl);
+    uploadedCakeUrl = null;
+    uploadedCakeImage = null;
+    cakeUploadPreview.removeAttribute("src");
+    cakeUploadPreview.hidden = true;
+    photoArea.classList.remove("has-uploaded-cake");
+    cakePhotoUpload.value = "";
+    switchButton.textContent = "카메라 전환";
+  }
+
+  function showUploadedCake() {
+    stopCamera();
+    cakeUploadPreview.src = uploadedCakeUrl;
+    cakeUploadPreview.hidden = false;
+    photoArea.classList.add("has-uploaded-cake");
+    switchButton.hidden = false;
+    switchButton.disabled = false;
+    switchButton.textContent = "카메라 사용";
+    takeButton.disabled = false;
+    takeButton.textContent = "사진 완성";
+    status.hidden = false;
+    status.textContent = "올린 케이크 사진으로 완성할 수 있어.";
+  }
+
+  function resumeLiveSource() {
+    if (captureMode === "cake" && uploadedCakeImage) {
+      showUploadedCake();
+    } else {
+      startCamera();
+    }
   }
 
   function clearResult() {
@@ -190,7 +255,11 @@
       URL.revokeObjectURL(photoUrl);
       photoUrl = null;
     }
+    photoBlob = null;
+    savedPhotoId = null;
+    savingPhoto = false;
     capturedImage.removeAttribute("src");
+    savedPhotoStatus.textContent = "";
     resultPanel.hidden = true;
     livePanel.hidden = false;
     status.hidden = true;
@@ -216,6 +285,9 @@
     cameraWriting.hidden = isCake;
     frameControls.hidden = isCake;
     frameOverlay.hidden = isCake || !selectedFrame;
+    cakeUploadControl.hidden = !isCake;
+    cakeUploadPreview.hidden = !isCake || !uploadedCakeImage;
+    photoArea.classList.toggle("has-uploaded-cake", isCake && Boolean(uploadedCakeImage));
     cameraTitle.textContent = isGallery ? "우리의 갤러리" : (isCake ? "생일 케이크 기록" : "우리의 오늘");
     takeButton.textContent = isCake ? "케이크 촬영" : "오늘 촬영";
     resultFrame.classList.toggle("is-cake-strip", isCake);
@@ -227,7 +299,7 @@
       livePanel.hidden = true;
       resultPanel.hidden = true;
       galleryPanel.hidden = false;
-      if (!galleryShown) renderMoreGalleryPhotos();
+      if (!galleryShown) void renderMoreGalleryPhotos();
       return;
     }
 
@@ -235,18 +307,30 @@
     if (previousMode === "gallery") {
       livePanel.hidden = false;
       resultPanel.hidden = true;
-      if (cameraUnlocked) startCamera();
+      if (cameraUnlocked) resumeLiveSource();
       return;
+    }
+
+    if (!wasShowingResult && previousMode !== mode && cameraUnlocked) {
+      if (isCake && uploadedCakeImage) {
+        showUploadedCake();
+      } else if (!stream) {
+        startCamera();
+      }
     }
 
     if (wasShowingResult && restartFromResult) {
       clearResult();
-      if (cameraUnlocked) startCamera();
+      if (cameraUnlocked) resumeLiveSource();
     }
   }
 
   async function startCamera() {
     stopCamera();
+    cakeUploadPreview.hidden = true;
+    photoArea.classList.remove("has-uploaded-cake");
+    switchButton.hidden = false;
+    switchButton.textContent = "카메라 전환";
     const requestId = ++cameraRequestId;
     takeButton.disabled = true;
     status.hidden = true;
@@ -329,6 +413,14 @@
       width,
       height
     );
+  }
+
+  function drawCurrentCakeCover(x, y, width, height) {
+    if (uploadedCakeImage) {
+      drawImageCover(uploadedCakeImage, x, y, width, height);
+    } else {
+      drawVideoCover(x, y, width, height);
+    }
   }
 
   function drawVideoCover(destinationX, destinationY, destinationWidth, destinationHeight) {
@@ -478,7 +570,7 @@
     const currentSectionY = topMargin + pastCakes.length * (yearBandHeight + photoSize);
     context.fillText(years[years.length - 1], stripWidth / 2, currentSectionY + yearBandHeight / 2);
     const currentPhotoY = currentSectionY + yearBandHeight;
-    drawVideoCover(sideMargin, currentPhotoY, photoSize, photoSize);
+    drawCurrentCakeCover(sideMargin, currentPhotoY, photoSize, photoSize);
 
     const greetingY = currentPhotoY + photoSize + footerTopGap + footerHeight / 2;
     context.fillStyle = "#8f3155";
@@ -488,7 +580,9 @@
   }
 
   async function takePhoto() {
-    if (!stream || !video.videoWidth) return;
+    const hasLiveCamera = Boolean(stream && video.videoWidth);
+    if ((captureMode === "cake" && !uploadedCakeImage && !hasLiveCamera)
+      || (captureMode === "us" && !hasLiveCamera)) return;
     takeButton.disabled = true;
     takeButton.textContent = "처리중…";
     switchButton.disabled = true;
@@ -520,6 +614,9 @@
           return;
         }
         if (photoUrl) URL.revokeObjectURL(photoUrl);
+        photoBlob = blob;
+        savedPhotoId = null;
+        savedPhotoStatus.textContent = "";
         photoUrl = URL.createObjectURL(blob);
         capturedImage.src = photoUrl;
         downloadLink.href = photoUrl;
@@ -566,8 +663,27 @@
     return `minhee-${subject}-${timestamp}-${pad(downloadSequence, 3)}.png`;
   }
 
-  downloadLink?.addEventListener("click", () => {
+  downloadLink?.addEventListener("click", async () => {
     downloadLink.download = createDownloadFilename(downloadLink.dataset.captureMode || captureMode);
+    if (!photoBlob || savedPhotoId || savingPhoto || !window.SITE_MEMORIES) return;
+    const blobToSave = photoBlob;
+    savingPhoto = true;
+    savedPhotoStatus.textContent = "사진을 갤러리와 배경에 넣는 중…";
+    try {
+      const memory = await window.SITE_MEMORIES.save(
+        blobToSave,
+        downloadLink.dataset.captureMode || captureMode
+      );
+      if (photoBlob === blobToSave) savedPhotoId = memory.id;
+      savedPhotoStatus.textContent = memory.persisted
+        ? "저장 완료 · 이 브라우저의 갤러리와 배경에도 추가했어."
+        : "파일은 저장했고, 이번 화면의 갤러리와 배경에 추가했어.";
+    } catch (error) {
+      console.error(error);
+      savedPhotoStatus.textContent = "파일은 저장했지만 갤러리에는 추가하지 못했어.";
+    } finally {
+      if (photoBlob === blobToSave) savingPhoto = false;
+    }
   });
 
   function pointerDistance() {
@@ -633,15 +749,59 @@
   photoArea.addEventListener("pointerup", finishFrameGesture);
   photoArea.addEventListener("pointercancel", finishFrameGesture);
   takeButton.addEventListener("click", takePhoto);
+  cakeUploadControl.addEventListener("click", () => cakePhotoUpload.click());
   switchButton.addEventListener("click", async () => {
+    if (captureMode === "cake" && uploadedCakeImage) {
+      clearUploadedCake();
+      await startCamera();
+      return;
+    }
     facingMode = facingMode === "user" ? "environment" : "user";
     await startCamera();
   });
+  cakePhotoUpload.addEventListener("change", () => {
+    const file = cakePhotoUpload.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      status.hidden = false;
+      status.textContent = "이미지 파일만 올릴 수 있어.";
+      cakePhotoUpload.value = "";
+      return;
+    }
+    const nextUrl = URL.createObjectURL(file);
+    const nextImage = new Image();
+    nextImage.onload = () => {
+      clearUploadedCake();
+      uploadedCakeUrl = nextUrl;
+      uploadedCakeImage = nextImage;
+      showUploadedCake();
+    };
+    nextImage.onerror = () => {
+      URL.revokeObjectURL(nextUrl);
+      cakePhotoUpload.value = "";
+      status.hidden = false;
+      status.textContent = "사진을 읽지 못했어. 다른 이미지로 다시 시도해 줘.";
+    };
+    nextImage.src = nextUrl;
+  });
   retakeButton.addEventListener("click", () => {
     clearResult();
-    startCamera();
+    resumeLiveSource();
   });
-  galleryMore.addEventListener("click", renderMoreGalleryPhotos);
+  galleryMore.addEventListener("click", () => void renderMoreGalleryPhotos());
+  document.addEventListener("memory-saved", async (event) => {
+    await savedGalleryReady;
+    const memory = event.detail;
+    if (!memory || galleryItems.some((item) => item.id === memory.id)) return;
+    const item = { id: memory.id, src: memory.src, saved: true };
+    galleryItems.unshift(item);
+    if (galleryShown > 0) {
+      galleryGrid.prepend(createGalleryFigure(item));
+      galleryShown += 1;
+      galleryCount.textContent = `${galleryShown} / ${galleryItems.length}`;
+      galleryMore.hidden = galleryShown >= galleryItems.length;
+    }
+  });
   modeTabs.forEach((tab, index) => {
     tab.addEventListener("click", () => setCaptureMode(tab.dataset.cameraMode));
     tab.addEventListener("keydown", (event) => {
@@ -657,6 +817,7 @@
   window.addEventListener("beforeunload", () => {
     stopCamera();
     if (photoUrl) URL.revokeObjectURL(photoUrl);
+    if (uploadedCakeUrl) URL.revokeObjectURL(uploadedCakeUrl);
   });
   document.addEventListener("feature-opened", (event) => {
     cameraUnlocked = false;
@@ -667,12 +828,13 @@
       restartFromResult: false
     });
     cameraUnlocked = true;
-    if (captureMode !== "gallery") startCamera();
+    if (captureMode !== "gallery") resumeLiveSource();
   });
   document.addEventListener("feature-closed", () => {
     cameraUnlocked = false;
     stopCamera();
     if (!resultPanel.hidden) clearResult();
+    clearUploadedCake();
     galleryPanel.hidden = true;
     livePanel.hidden = false;
     document.body.classList.remove("gallery-active");
